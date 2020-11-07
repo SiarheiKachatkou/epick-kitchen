@@ -206,7 +206,7 @@ noun_id,class_key,nouns
 204,shirt,"['shirt', 't', 'shirt:tee']"
 205,chair,['chair']
 206,sandwich,['sandwich']
-207,burger:tuna,"['burger:tuna', 'patty', 'patty:tuna', 'burger', 'hamburger']"
+207,burger,"['burger:tuna', 'patty', 'patty:tuna', 'burger:tuna', 'hamburger']"
 208,pancake,['pancake']
 209,leftover,"['leftover', 'food:leftover']"
 210,risotto,['risotto']
