@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 
-def clip_into_input(path_to_video, frame_height, frame_width, segment_count):
+def clip_into_snippets(path_to_video, frame_height, frame_width, segment_count):
 
     '''
 

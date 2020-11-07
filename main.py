@@ -1,26 +1,9 @@
 import torch.hub
-import pandas as pd
-from split_video_into_frames import clip_into_input
+import glob
+from clip_into_snippets import clip_into_snippets
+from consts import height,width,segment_count,class_counts, repo, batch_size, nouns, verbs
+from utils_visualization import get_topK_words, show_snippet
 
-
-src_video_path = 'data/Tiny KFC.mp4'
-
-nouns = pd.read_csv('data/EPIC_noun_classes.csv')
-verbs = pd.read_csv('data/EPIC_verb_classes.csv')
-
-batch_size = 1
-segment_count = 8
-snippet_length = 1  # Number of frames composing the snippet, 1 for RGB, 5 for optical flow
-snippet_channels = 3  # Number of channels in a frame, 3 for RGB, 2 for optical flow
-height, width = 224, 224
-
-snippets = clip_into_input(src_video_path,height,width, segment_count)
-
-inputs = torch.tensor(snippets)
-
-repo = 'epic-kitchens/action-models'
-
-class_counts = (125, 352)
 
 base_model = 'resnet50'
 tsn = torch.hub.load(repo, 'TSN', class_counts, segment_count, 'RGB',
@@ -41,25 +24,33 @@ for entrypoint in torch.hub.list(repo):
     print(entrypoint)
     print(torch.hub.help(repo, entrypoint))
 
-
-# The segment and snippet length and channel dimensions are collapsed into the channel
-# dimension
-# Input shape: N x TC x H x W
-inputs = inputs.reshape((batch_size, -1, height, width))
+src_video_paths = glob.glob('data/clips/*')
 for model in [tsn, trn, mtrn, tsm]:
-    # You can get features out of the models
-    features = model.features(inputs)
-    # and then classify those features
-    verb_logits, noun_logits = model.logits(features)
+    for src_video_path in src_video_paths:
 
-    # or just call the object to classify inputs in a single forward pass
-    verb_logits, noun_logits = model(inputs)
-    verb_idx=verb_logits.argmax(dim=1).detach().cpu().numpy()[0]
-    noun_idx = noun_logits.argmax(dim=1).detach().cpu().numpy()[0]
+        print(f'video_path={src_video_path}')
 
-    print(verb_logits.shape, noun_logits.shape)
-    n=nouns.iloc[noun_idx]['nouns']
-    print(f"noun = {n}")
-    v=verbs.iloc[verb_idx]['verbs']
-    print(f"verbs = {v}")
+        snippets = clip_into_snippets(src_video_path, height, width, segment_count)
+
+        # The segment and snippet length and channel dimensions are collapsed into the channel
+        # dimension
+        # Input shape: N x TC x H x W
+        inputs = torch.tensor(snippets)
+        inputs = inputs.reshape((batch_size, -1, height, width))
+        # You can get features out of the models
+        features = model.features(inputs)
+        # and then classify those features
+        verb_logits, noun_logits = model.logits(features)
+
+        # or just call the object to classify inputs in a single forward pass
+        verb_logits, noun_logits = model(inputs)
+
+        topk_verbs = get_topK_words(verb_logits,verbs['class_key'], k=5)
+        topk_nouns = get_topK_words(noun_logits, nouns['class_key'], k=5)
+
+        print(verb_logits.shape, noun_logits.shape)
+
+        print(f"noun = {topk_nouns}")
+        print(f"verbs = {topk_verbs}")
+        show_snippet(snippets)
 
