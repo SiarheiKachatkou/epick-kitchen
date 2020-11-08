@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import cv2
+import random
+import torch
 
 
 def _img_standardize(frame, frame_height, frame_width):
@@ -32,7 +34,7 @@ def clip_to_frame_list(path_to_video, frame_height, frame_width):
 
     return frame_list
 
-def clip_into_snippets(path_to_video, frame_height, frame_width, segment_count):
+def clip_into_snippets(path_to_video, frame_height, frame_width, segment_count, is_random=False, augm_fn=None):
 
     '''
 
@@ -52,7 +54,13 @@ def clip_into_snippets(path_to_video, frame_height, frame_width, segment_count):
     frames_per_segment=len(frame_list)//segment_count
 
     for segment_idx in range(segment_count):
-        snippet=frame_list[segment_idx*frames_per_segment+frames_per_segment//2]
+        if is_random:
+            snippet = random.choice(frame_list[segment_idx * frames_per_segment: (segment_idx+1) * frames_per_segment])
+        else:
+            snippet = frame_list[segment_idx*frames_per_segment+frames_per_segment//2]
+
+        if augm_fn is not None:
+            snippet = augm_fn(snippet)
         snippets.append(snippet)
 
     snippets=np.stack(snippets,axis=0) #[segment_count,height,width,channels]
@@ -67,3 +75,28 @@ def noun_verb_from_path(pth_to_video):
     base = os.path.basename(pth_to_video)
     noun, verb = base.split('_')[:2]
     return noun, verb
+
+
+def normalize_inputs_for_model(snippets,model):
+    base=model.base_model
+    if hasattr(base,'mean'):
+        m = np.reshape(model.base_model.mean, (1, 1, 1, 3, 1, 1))
+        s = np.reshape(model.base_model.std, (1, 1, 1, 3, 1, 1))
+    else:
+        if hasattr(model,'input_mean'):
+            m = np.reshape(model.input_mean, (1, 1, 1, 3, 1, 1))
+            s = np.reshape(model.input_std, (1, 1, 1, 1, 1, 1))
+        else:
+            raise NotImplementedError('unknown normalization params')
+
+    if hasattr(base,'input_range'):
+        if model.base_model.input_range==[0,1]:
+            inputs = snippets / 255
+        else:
+            inputs = snippets / 255 - 0.5
+    else:
+        inputs = snippets
+
+    inputs = torch.tensor((inputs - m) / s).float()
+    return inputs
+

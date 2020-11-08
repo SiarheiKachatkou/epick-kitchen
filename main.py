@@ -1,83 +1,69 @@
+import os
 import torch
 import torch.hub
 import glob
 import time
 import numpy as np
+from tqdm import tqdm
 from utils_snippets import clip_into_snippets, noun_verb_from_path
-from consts import height,width,segment_count,class_counts, repo, batch_size, nouns, verbs
-from utils_visualization import get_topK_words, show_snippet
+from consts import height, width, segment_count, class_counts, repo, batch_size, nouns, verbs
+from utils_visualization import show_snippet
+from performance_metric import update_performance, finalize_performance, init_model_performance_dict, \
+    plot_performace, init_nan_model_performance_dict
+from augmentations import get_4_augms_list, get_1_augms_list
+from utils_snippets import normalize_inputs_for_model
 
-def update_performance(models_performance, noun_logits, verb_logits, nouns, verbs, target_noun, target_verb, the_time):
-    topk_verbs = get_topK_words(verb_logits, verbs['class_key'], k=5)
-    topk_nouns = get_topK_words(noun_logits, nouns['class_key'], k=5)
-    models_performance['verb_acc'].append(int(target_verb==topk_verbs[0]))
-    models_performance['noun_acc'].append(int(target_noun == topk_nouns[0]))
-    models_performance['verb_acc_top5'].append(int(target_verb in topk_verbs))
-    models_performance['noun_acc_top5'].append(int(target_noun in topk_nouns))
+base_models = ['resnet50', 'BNInception']
+heads = ['TSN', 'TRN', 'MTRN', 'TSM']
+device = 'cpu' #'cuda'
 
-    noun_label=torch.tensor([nouns[nouns['class_key'] == target_noun]['noun_id'].values[0]])
-    noun_loss=torch.nn.functional.cross_entropy(noun_logits,noun_label)
+random_iters = 4
+augm_fn_list = get_4_augms_list()
 
-    verb_label = torch.tensor([verbs[verbs['class_key'] == target_verb]['verb_id'].values[0]])
-    verb_loss = torch.nn.functional.cross_entropy(verb_logits, verb_label)
-
-    loss=(noun_loss+verb_loss)*0.5
-    models_performance['loss'].append(loss.detach().cpu().numpy()[0])
-
-    models_performance['time'].append(the_time)
-
-
-def finalize_performance(models_performance):
-    for k,vals in models_performance.items():
-        models_performance[k]=np.mean(vals)
-
-base_model = 'resnet50'
-tsn = torch.hub.load(repo, 'TSN', class_counts, segment_count, 'RGB',
-                     base_model=base_model,
-                     pretrained='epic-kitchens', force_reload=True)
-trn = torch.hub.load(repo, 'TRN', class_counts, segment_count, 'RGB',
-                     base_model=base_model,
-                     pretrained='epic-kitchens')
-mtrn = torch.hub.load(repo, 'MTRN', class_counts, segment_count, 'RGB',
-                      base_model=base_model,
-                      pretrained='epic-kitchens')
-tsm = torch.hub.load(repo, 'TSM', class_counts, segment_count, 'RGB',
-                     base_model=base_model,
-                     pretrained='epic-kitchens')
-
-# Show all entrypoints and their help strings
-for entrypoint in torch.hub.list(repo):
-    print(entrypoint)
-    print(torch.hub.help(repo, entrypoint))
-
+perfs = {}
 src_video_paths = glob.glob('data/frames/*')
 
+for head in heads:
+    for base_model in base_models:
 
+        try:
+            model = torch.hub.load(repo, head, class_counts, segment_count, 'RGB',
+                                   base_model=base_model,
+                                   pretrained='epic-kitchens', force_reload=True)
+            model.eval()
+            model.to(device)
 
-for model in [tsn, trn, mtrn, tsm]:
+        except:
+            print(f'enable load {head} with {base_model}')
+            perfs.update({(head, base_model): init_nan_model_performance_dict()})
+            continue
 
-    models_performance = {'noun_acc': [], 'verb_acc': [],'noun_acc_top5': [], 'verb_acc_top5': [], 'time': [], 'loss': []}
+        model_performance = init_model_performance_dict()
 
-    for src_video_path in src_video_paths:
+        for random_iter in tqdm(range(random_iters)):
+            for augm_fn in augm_fn_list:
+                for src_video_path in src_video_paths:
+                    snippets = clip_into_snippets(src_video_path, height, width, segment_count, is_random=True,
+                                                  augm_fn=augm_fn)
+                    target_noun, target_verb = noun_verb_from_path(src_video_path)
 
-        print(f'video_path={src_video_path}')
-        snippets = clip_into_snippets(src_video_path, height, width, segment_count)
-        target_noun,target_verb=noun_verb_from_path(src_video_path)
+                    inputs = normalize_inputs_for_model(snippets, model)
 
-        m = np.reshape(model.base_model.mean, (1, 1, 1, 3, 1, 1))
-        s = np.reshape(model.base_model.std, (1, 1, 1, 3, 1, 1))
+                    inputs = inputs.reshape((batch_size, -1, height, width))
+                    inputs = inputs.to(device)
 
-        inputs = torch.tensor((snippets/255-m)/s).float()
-        inputs = inputs.reshape((batch_size, -1, height, width))
+                    start = time.time()
+                    with torch.no_grad():
+                        verb_logits, noun_logits = model(inputs)
+                    finish = time.time()
+                    the_time = finish - start
+                    update_performance(model_performance, noun_logits, verb_logits, nouns, verbs, target_noun,
+                                       target_verb, the_time)
 
-        start=time.time()
-        verb_logits, noun_logits = model(inputs)
-        finish = time.time()
-        the_time=finish-start
-        update_performance(models_performance, noun_logits, verb_logits, nouns, verbs, target_noun, target_verb, the_time)
+                    # show_snippet(snippets)
 
-        #show_snippet(snippets)
-        dbg=1
-    finalize_performance(models_performance)
-    print(models_performance)
+        finalize_performance(model_performance)
+        print(model_performance)
+        perfs.update({(head, base_model): model_performance})
 
+plot_performace(perfs, base_models, heads)

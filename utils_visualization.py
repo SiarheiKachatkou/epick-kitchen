@@ -26,3 +26,4 @@ def get_topK_words(logits, df_words, k=5):
     words = [df_words.iloc[i] for i in word_idx]
 
     return words
+
