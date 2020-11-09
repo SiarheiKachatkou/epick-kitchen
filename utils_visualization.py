@@ -20,10 +20,3 @@ def show_snippet(snippet):
 
     plt.show()
 
-
-def get_topK_words(logits, df_words, k=5):
-    word_idx = logits.argsort(dim=1, descending=True).detach().cpu().numpy()[0][0:k]
-    words = [df_words.iloc[i] for i in word_idx]
-
-    return words
-

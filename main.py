@@ -6,64 +6,58 @@ import time
 import numpy as np
 from tqdm import tqdm
 from utils_snippets import clip_into_snippets, noun_verb_from_path
-from consts import height, width, segment_count, class_counts, repo, batch_size, nouns, verbs
+from consts import height, width, segment_count, class_counts, repo, batch_size, \
+    nouns, verbs, frames_path_pattern, heads, base_models, device, random_iters, augm_fn_list
 from utils_visualization import show_snippet
 from performance_metric import update_performance, finalize_performance, init_model_performance_dict, \
-    plot_performace, init_nan_model_performance_dict
-from augmentations import get_4_augms_list, get_1_augms_list
+    plot_performance, init_nan_model_performance_dict
 from utils_snippets import normalize_inputs_for_model
 
-base_models = ['resnet50', 'BNInception']
-heads = ['TSN', 'TRN', 'MTRN', 'TSM']
-device = 'cpu' #'cuda'
+if __name__=="__main__":
 
-random_iters = 4
-augm_fn_list = get_4_augms_list()
+    perfs = {}
+    src_video_paths = glob.glob(frames_path_pattern)
 
-perfs = {}
-src_video_paths = glob.glob('data/frames/*')
+    for head in heads:
+        for base_model in base_models:
 
-for head in heads:
-    for base_model in base_models:
+            try:
+                model = torch.hub.load(repo, head, class_counts, segment_count, 'RGB',
+                                       base_model=base_model,
+                                       pretrained='epic-kitchens', force_reload=True)
+                model.eval()
+                model.to(device)
+            except:
+                print(f'enable load {head} with {base_model}')
+                perfs.update({(head, base_model): init_nan_model_performance_dict()})
+                continue
 
-        try:
-            model = torch.hub.load(repo, head, class_counts, segment_count, 'RGB',
-                                   base_model=base_model,
-                                   pretrained='epic-kitchens', force_reload=True)
-            model.eval()
-            model.to(device)
+            model_performance = init_model_performance_dict()
 
-        except:
-            print(f'enable load {head} with {base_model}')
-            perfs.update({(head, base_model): init_nan_model_performance_dict()})
-            continue
+            for random_iter in tqdm(range(random_iters)):
+                for augm_fn in augm_fn_list:
+                    for src_video_path in src_video_paths:
+                        snippets = clip_into_snippets(src_video_path, height, width, segment_count, is_random=True,
+                                                      augm_fn=augm_fn)
+                        target_noun, target_verb = noun_verb_from_path(src_video_path)
 
-        model_performance = init_model_performance_dict()
+                        inputs = normalize_inputs_for_model(snippets, model)
 
-        for random_iter in tqdm(range(random_iters)):
-            for augm_fn in augm_fn_list:
-                for src_video_path in src_video_paths:
-                    snippets = clip_into_snippets(src_video_path, height, width, segment_count, is_random=True,
-                                                  augm_fn=augm_fn)
-                    target_noun, target_verb = noun_verb_from_path(src_video_path)
+                        inputs = inputs.reshape((batch_size, -1, height, width))
+                        inputs = inputs.to(device)
 
-                    inputs = normalize_inputs_for_model(snippets, model)
+                        start = time.time()
+                        with torch.no_grad():
+                            verb_logits, noun_logits = model(inputs)
+                        finish = time.time()
+                        the_time = finish - start
+                        update_performance(model_performance, noun_logits, verb_logits, nouns, verbs, target_noun,
+                                           target_verb, the_time)
 
-                    inputs = inputs.reshape((batch_size, -1, height, width))
-                    inputs = inputs.to(device)
+                        # show_snippet(snippets)
 
-                    start = time.time()
-                    with torch.no_grad():
-                        verb_logits, noun_logits = model(inputs)
-                    finish = time.time()
-                    the_time = finish - start
-                    update_performance(model_performance, noun_logits, verb_logits, nouns, verbs, target_noun,
-                                       target_verb, the_time)
+            finalize_performance(model_performance)
+            print(model_performance)
+            perfs.update({(head, base_model): model_performance})
 
-                    # show_snippet(snippets)
-
-        finalize_performance(model_performance)
-        print(model_performance)
-        perfs.update({(head, base_model): model_performance})
-
-plot_performace(perfs, base_models, heads)
+    plot_performance(perfs, base_models, heads)
