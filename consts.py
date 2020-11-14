@@ -11,7 +11,7 @@ repo = 'epic-kitchens/action-models'
 
 class_counts = (125, 352)
 
-frames_path_pattern = 'data/frames/*'
+frames_path_pattern = 'data/frames_a/*'
 
 nouns = pd.read_csv('data/EPIC_noun_classes.csv')
 verbs = pd.read_csv('data/EPIC_verb_classes.csv')
@@ -23,3 +23,10 @@ device = 'cpu' #'cuda'
 
 random_iters = 4
 augm_fn_list = get_4_augms_list()
+
+
+#fine tune params
+fine_tune_epochs=20
+fine_tune_lr=0.001
+fine_tune_verbs=['take','put','move']
+fine_tune_val_split=0.2

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import cv2
 import random
-import torch
+#import torch
 
 
 def _img_standardize(frame, frame_height, frame_width):
