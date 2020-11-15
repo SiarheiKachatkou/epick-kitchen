@@ -38,24 +38,27 @@ if __name__=="__main__":
     test_video_paths=get_filtered_paths('data/frames_a',fine_tune_verbs)
 
     try:
-        model = torch.hub.load(repo, fine_tune_head, class_counts, segment_count, 'RGB',
+        wide_model = torch.hub.load(repo, fine_tune_head, class_counts, segment_count, 'RGB',
                                base_model=fine_tune_base,
                                pretrained='epic-kitchens', force_reload=True)
-
-        model=NarrowModel(wide_model=model,verb_class_idxs=fine_tune_class_idxs)
-        model.to(device)
 
     except:
         print(f'enable load {fine_tune_head} with {fine_tune_base}')
         raise NotImplementedError()
 
-    train_dataset=KitchenDataset(train_videos_path,height,width,segment_count,model,is_random=True,augm_fn=get_4_augms_list())
+    model = NarrowModel(wide_model=wide_model, verb_class_idxs=fine_tune_class_idxs)
+    model.to(device)
+
+    train_dataset=KitchenDataset(train_videos_path,height,width,segment_count,wide_model,verbs_list=fine_tune_verbs,
+                                 is_random=True,augm_fn=get_4_augms_list())
     train_loader=DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
 
-    val_dataset=KitchenDataset(val_videos_path,height,width,segment_count,model,is_random=True,augm_fn=get_4_augms_list())
+    val_dataset=KitchenDataset(val_videos_path,height,width,segment_count,wide_model,
+                               verbs_list=fine_tune_verbs, is_random=True,augm_fn=get_4_augms_list())
     val_loader=DataLoader(val_dataset,batch_size=batch_size,shuffle=False)
 
-    test_dataset=KitchenDataset(test_video_paths,height,width,segment_count,model,is_random=False,augm_fn=None)
+    test_dataset=KitchenDataset(test_video_paths,height,width,segment_count,wide_model,
+                                verbs_list=fine_tune_verbs,is_random=False,augm_fn=None)
     test_loader=DataLoader(test_dataset,batch_size=batch_size,shuffle=False)
 
     metrics=init_metrics(fine_tune_epochs)

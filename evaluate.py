@@ -23,7 +23,7 @@ def evaluate(metrics,model,criterion,train_loader, val_loader, test_loader, epoc
             loss=criterion(logits, targets)
             losses.append(loss.detach().cpu().numpy())
             preds=torch.argmax(logits,dim=1)
-            acc=torch.equal(targets,preds).mean()
+            acc=torch.eq(targets,preds).float().mean()
             accs.append(acc.detach().cpu().numpy())
         metrics[column+'_acc'][epoch]=np.mean(accs)
         metrics[column + '_loss'][epoch] = np.mean(losses)

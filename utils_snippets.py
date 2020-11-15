@@ -2,7 +2,7 @@ import os
 import numpy as np
 import cv2
 import random
-#import torch
+import torch
 
 
 def _img_standardize(frame, frame_height, frame_width):
@@ -60,7 +60,7 @@ def clip_into_snippets(path_to_video, frame_height, frame_width, segment_count, 
             snippet = frame_list[segment_idx*frames_per_segment+frames_per_segment//2]
 
         if augm_fn is not None:
-            snippet = augm_fn(snippet)
+            snippet = random.choice(augm_fn)(snippet)
         snippets.append(snippet)
 
     snippets=np.stack(snippets,axis=0) #[segment_count,height,width,channels]

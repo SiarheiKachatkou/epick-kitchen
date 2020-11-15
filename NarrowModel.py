@@ -2,6 +2,7 @@ import torch
 
 class NarrowModel(torch.nn.Module):
     def __init__(self, wide_model, verb_class_idxs):
+        super().__init__()
         self._wide_model=wide_model
         self._verb_idxs=verb_class_idxs
 
