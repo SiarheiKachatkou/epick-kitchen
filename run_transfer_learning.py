@@ -6,11 +6,12 @@ import glob
 import time
 from torch.utils.data import DataLoader
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from utils_snippets import clip_into_snippets, noun_verb_from_path
 from consts import height, width, segment_count, class_counts, repo, batch_size, \
     nouns, verbs, frames_path_pattern, heads, base_models, device, random_iters, augm_fn_list, \
-    fine_tune_verbs, fine_tune_val_split, fine_tune_epochs
+    fine_tune_verbs, fine_tune_val_split, fine_tune_epochs, fine_tune_head, fine_tune_base
 from utils_visualization import show_snippet
 from utils_snippets import normalize_inputs_for_model
 from NarrowModel import NarrowModel
@@ -25,26 +26,22 @@ def get_filtered_paths(root_path, verbs_list):
 
 if __name__=="__main__":
 
-    perfs = {}
     train_val_video_paths = get_filtered_paths('data/frames_b',fine_tune_verbs)
     random.shuffle(train_val_video_paths)
     split=int(fine_tune_val_split*len(train_val_video_paths))
-    val_videos_path=train_val_video_paths[:fine_tune_val_split]
-    train_videos_path=train_val_video_paths[fine_tune_val_split:]
+    val_videos_path=train_val_video_paths[:split]
+    train_videos_path=train_val_video_paths[split:]
 
-    test_video_paths=glob.glob('data/frames_a',fine_tune_verbs)
-
-    head=heads[1]
-    base_model=base_models[1]
+    test_video_paths=get_filtered_paths('data/frames_a',fine_tune_verbs)
 
     try:
-        model = torch.hub.load(repo, head, class_counts, segment_count, 'RGB',
-                               base_model=base_model,
+        model = torch.hub.load(repo, fine_tune_head, class_counts, segment_count, 'RGB',
+                               base_model=fine_tune_base,
                                pretrained='epic-kitchens', force_reload=True)
         model.eval()
         model.to(device)
     except:
-        print(f'enable load {head} with {base_model}')
+        print(f'enable load {fine_tune_head} with {fine_tune_base}')
         raise NotImplementedError()
 
     train_dataset=KitchenDataset(train_videos_path,height,width,segment_count,model,is_random=True,augm_fn=get_4_augms_list())
@@ -55,7 +52,6 @@ if __name__=="__main__":
 
     test_dataset=KitchenDataset(test_video_paths,height,width,segment_count,model,is_random=False,augm_fn=None)
     test_loader=DataLoader(test_dataset,batch_size=batch_size,shuffle=False)
-
 
     metrics=pd.DataFrame()
 
