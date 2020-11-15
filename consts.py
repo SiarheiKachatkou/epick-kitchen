@@ -27,7 +27,7 @@ augm_fn_list = get_4_augms_list()
 
 #fine tune params
 fine_tune_epochs=100
-fine_tune_lr=1e-6
+fine_tune_lr=1e-4
 fine_tune_verbs=['take','put','move']
 fine_tune_val_split=0.2
 fine_tune_head='TRN'

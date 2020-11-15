@@ -47,15 +47,15 @@ if __name__=="__main__":
 
     train_dataset=KitchenDataset(train_videos_path,height,width,segment_count,wide_model,verbs_list=fine_tune_verbs,
                                  is_random=True,augm_fn=get_4_augms_list())
-    train_loader=DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
+    train_loader=DataLoader(train_dataset,batch_size=batch_size,shuffle=True,drop_last=False)
 
     val_dataset=KitchenDataset(val_videos_path,height,width,segment_count,wide_model,
                                verbs_list=fine_tune_verbs, is_random=True,augm_fn=get_4_augms_list())
-    val_loader=DataLoader(val_dataset,batch_size=batch_size,shuffle=False)
+    val_loader=DataLoader(val_dataset,batch_size=batch_size,shuffle=False,drop_last=False)
 
     test_dataset=KitchenDataset(test_video_paths,height,width,segment_count,wide_model,
                                 verbs_list=fine_tune_verbs,is_random=False,augm_fn=None)
-    test_loader=DataLoader(test_dataset,batch_size=batch_size,shuffle=False)
+    test_loader=DataLoader(test_dataset,batch_size=batch_size,shuffle=False, drop_last=False)
 
     metrics=init_metrics(fine_tune_epochs)
 
@@ -79,5 +79,10 @@ if __name__=="__main__":
         metrics = evaluate(metrics, model, criterion, train_loader, val_loader, test_loader, epoch=epoch+1)
 
     print(metrics.head())
-    metrics.plot()
-    plt.show()
+    metrics.to_csv('plots/fine_tune_metrics.csv')
+    columns = metrics.columns
+    for key in ['acc', 'loss']:
+        cols = [c for c in columns if key in c]
+        metrics[cols].plot()
+        plt.title(key)
+        plt.savefig(f'plots/fine_tune_{key}.png')
