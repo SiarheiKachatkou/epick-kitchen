@@ -67,8 +67,9 @@ if __name__=="__main__":
 
     metrics=evaluate(metrics,model,criterion, train_loader, val_loader, test_loader, epoch=0)
 
-    optimizer = torch.optim.Adam(model.head.parameters(),lr=fine_tune_lr)
-    for epoch in range(fine_tune_epochs):
+    verbs_linear_layer=list(model._wide_model.modules())[-1]
+    optimizer = torch.optim.Adam(verbs_linear_layer.parameters(),lr=fine_tune_lr)
+    for epoch in tqdm(range(fine_tune_epochs)):
         model.train()
         for snippets,targets in train_loader:
             optimizer.zero_grad()
@@ -79,3 +80,5 @@ if __name__=="__main__":
             optimizer.step()
 
         metrics = evaluate(metrics, model, criterion, train_loader, val_loader, test_loader, epoch=epoch+1)
+
+    print(metrics.head())
