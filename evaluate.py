@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+from consts import device
 
 def init_metrics(epochs):
     nan_data = np.full((epochs + 1, 6), np.nan)
@@ -19,6 +20,8 @@ def evaluate(metrics,model,criterion,train_loader, val_loader, test_loader, epoc
         losses=[]
         accs=[]
         for snippets,targets in loader:
+            snippets=snippets.to(device)
+            targets=targets.to(device)
             logits=model(snippets)
             loss=criterion(logits, targets)
             losses.append(loss.detach().cpu().numpy())
