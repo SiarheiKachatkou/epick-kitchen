@@ -30,6 +30,7 @@ def show_snippet(snippet,most_important_tuple,target_idx,predicted_idx, max_prob
         plt.axis('off')
 
     plt.suptitle(f'predicted={fine_tune_verbs[predicted_idx]} target={fine_tune_verbs[target_idx]} importance={max_prob_degradation}')
+    plt.savefig('plots/intepretation.png')
 
 
 if __name__=="__main__":
@@ -38,7 +39,7 @@ if __name__=="__main__":
                                 pretrained='epic-kitchens', force_reload=True)
 
     model=torch.load(os.path.join(trained_models_dir,'model.pth'))
-    video_path='data/frames/hand_put'
+    video_path='data/frames_b/sauce_move'
     train_dataset = KitchenDataset([video_path], height, width, segment_count, wide_model,
                                    verbs_list=fine_tune_verbs,
                                    is_random=False, augm_fn=None)
@@ -69,4 +70,4 @@ if __name__=="__main__":
     predicted=int(predicted.detach().cpu().numpy())
     show_snippet(snippets, most_influential_tuple, target, predicted, max_prob_degradation)
     plt.show()
-    plt.savefig('plots/intepretation.png')
+
