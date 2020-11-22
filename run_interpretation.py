@@ -17,11 +17,11 @@ from KitchenDataset import KitchenDataset
 from augmentations import get_4_augms_list, get_1_augms_list
 from evaluate import init_metrics,evaluate
 
-def show_snippet(snippet,most_important_tuple,target_idx,predicted_idx, channels=3):
+def show_snippet(snippet,most_important_tuple,target_idx,predicted_idx, max_prob_degradation, channels=3):
     rows=2
     snippet=snippet.detach().cpu().numpy()
     images=[snippet[i*channels:(i+1)*channels] for i in range(len(snippet)//channels)]
-    images=[cv2.normalize(np.transpose(im,(1,2,0)),0,255,cv2.NORM_MINMAX).astype(np.uint8) for im in images]
+    images=[cv2.normalize(np.transpose(im,(1,2,0)),None,0,255,cv2.NORM_MINMAX).astype(np.uint8) for im in images]
     for i,img in enumerate(images):
         plt.subplot(rows,len(images)//rows,i+1)
         plt.imshow(img)
@@ -29,7 +29,7 @@ def show_snippet(snippet,most_important_tuple,target_idx,predicted_idx, channels
             plt.title('!')
         plt.axis('off')
 
-    plt.suptitle(f'predicted={fine_tune_verbs[predicted_idx]} target={fine_tune_verbs[target_idx]}')
+    plt.suptitle(f'predicted={fine_tune_verbs[predicted_idx]} target={fine_tune_verbs[target_idx]} importance={max_prob_degradation}')
 
 
 if __name__=="__main__":
@@ -38,7 +38,7 @@ if __name__=="__main__":
                                 pretrained='epic-kitchens', force_reload=True)
 
     model=torch.load(os.path.join(trained_models_dir,'model.pth'))
-    video_path='data/frames_b/cheese_put_1'
+    video_path='data/frames/hand_put'
     train_dataset = KitchenDataset([video_path], height, width, segment_count, wide_model,
                                    verbs_list=fine_tune_verbs,
                                    is_random=False, augm_fn=None)
@@ -67,6 +67,6 @@ if __name__=="__main__":
                 most_influential_tuple=(i,j)
 
     predicted=int(predicted.detach().cpu().numpy())
-    show_snippet(snippets, most_influential_tuple, target, predicted)
+    show_snippet(snippets, most_influential_tuple, target, predicted, max_prob_degradation)
     plt.show()
-    dbg=1
+    plt.savefig('plots/intepretation.png')
