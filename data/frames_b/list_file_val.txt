@@ -1,0 +1,16 @@
+data/frames_b/mixture_move_2 72 mixture_move_2
+data/frames_b/meal_take_1 102 meal_take_1
+data/frames_b/yougurt_put 36 yougurt_put
+data/frames_b/meat_take 60 meat_take
+data/frames_b/cream_put_3 96 cream_put_3
+data/frames_b/salad_take 60 salad_take
+data/frames_b/mixture_put 59 mixture_put
+data/frames_b/four_put_1 108 four_put_1
+data/frames_b/bun_put_2 38 bun_put_2
+data/frames_b/sauce_put_3 52 sauce_put_3
+data/frames_b/cream_put 77 cream_put
+data/frames_b/bowl_move 19 bowl_move
+data/frames_b/flaut_move_3 159 flaut_move_3
+data/frames_b/salad_put_1 42 salad_put_1
+data/frames_b/tomato_put 118 tomato_put
+data/frames_b/flaut_move 41 flaut_move

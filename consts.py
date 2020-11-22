@@ -12,6 +12,7 @@ repo = 'epic-kitchens/action-models'
 class_counts = (125, 352)
 
 frames_path_pattern = 'data/frames_a/*'
+trained_models_dir = 'trained_models'
 
 nouns = pd.read_csv('data/EPIC_noun_classes.csv')
 verbs = pd.read_csv('data/EPIC_verb_classes.csv')

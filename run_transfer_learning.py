@@ -9,7 +9,8 @@ import numpy as np
 from tqdm import tqdm
 from consts import height, width, segment_count, class_counts, repo, batch_size, \
     nouns, verbs, frames_path_pattern, heads, base_models, device, random_iters, augm_fn_list, \
-    fine_tune_verbs, fine_tune_val_split, fine_tune_epochs, fine_tune_head, fine_tune_base, fine_tune_lr
+    fine_tune_verbs, fine_tune_val_split, fine_tune_epochs, fine_tune_head, fine_tune_base, fine_tune_lr, \
+    trained_models_dir
 from NarrowModel import NarrowModel
 from KitchenDataset import KitchenDataset
 from augmentations import get_4_augms_list, get_1_augms_list
@@ -47,6 +48,7 @@ if __name__=="__main__":
 
     train_dataset=KitchenDataset(train_videos_path,height,width,segment_count,wide_model,verbs_list=fine_tune_verbs,
                                  is_random=True,augm_fn=get_4_augms_list())
+
     train_loader=DataLoader(train_dataset,batch_size=batch_size,shuffle=True,drop_last=False)
 
     val_dataset=KitchenDataset(val_videos_path,height,width,segment_count,wide_model,
@@ -86,3 +88,5 @@ if __name__=="__main__":
         metrics[cols].plot()
         plt.title(key)
         plt.savefig(f'plots/fine_tune_{key}.png')
+
+    torch.save(model,os.path.join(trained_models_dir,'model.pth'))

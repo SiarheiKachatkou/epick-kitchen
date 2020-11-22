@@ -130,3 +130,4 @@ dmypy.json
 .idea
 data/clips_b
 data/clips_b_frames
+trained_models
